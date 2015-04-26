@@ -1,3 +1,4 @@
+A pattern for processing a collection of desperate generic objects in a strongly typed fashion
 ------------------------------------------------------------------------
 When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing objectsa collection of desperate generic objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages, no matter what type they are. 
 
@@ -155,6 +156,5 @@ Lets imagine that `IEnumerable<IMessage>` contains a `Message<Get>` message and 
  2. `Message<T>` then does a call back  to the `Accept<T>` method of the `Behavior`, **to handle it in its strongly typed form** . => `"cellBehavior.Accept<Get>(Message<Get> message)"`
  2. It then repeats the trick by checking if the `Behavior` implements the `IHandle<Get>` interface (thus `IHandle<T>` for that specific type of `T`) . If so it **calls back again to the `Message<Get>`** passing itself as the `IHandle<Get>` => `"message.GetHandledBy(_cellBehavior)"`
  3. Then for the last time the `Message<T>` calls back again to the `Behavior` (or more specifically, the `IHandle<Get>`) passing the body of the message (`Get`) as an argument **in a strongly typed fashion**
-
 
 
