@@ -1,6 +1,6 @@
-A pattern for processing a collection of desperate generic objects in a strongly typed fashion
+A pattern for processing a collection of disperate generic objects in a strongly typed fashion
 ------------------------------------------------------------------------
-When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing objectsa collection of desperate generic objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages, no matter what type they are. 
+When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing objectsa collection of disperate generic objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages, no matter what type they are. 
 
 A simple solution would be to put objects into the queue and cast them to a specific type. Be that as it may, in a system that potentially handles a huge amount of messages, this means a huge amount of type casting as well. In addition to that, an actor needs to respond to each message type in a different way (sending a message to an actor is somewhat of an equivalent to calling a method on an object). I would like some poor mans [pattern matching](http://en.wikipedia.org/wiki/Pattern_matching) so to say, based on the types of messages coming in.
 
@@ -36,7 +36,7 @@ The "messages" enumerable must be able to hold any kind of object. But remember,
         public T Content { get; private set; }
     }
    
-Because I can't put these desperate message types in one list, I must have a shared interface to do so. This is the IMessage interface shown below (ignore the method for now):
+Because I can't put these disperate message types in one list, I must have a shared interface to do so. This is the IMessage interface shown below (ignore the method for now):
 
     internal interface IMessage
     {
@@ -70,7 +70,7 @@ So adding messages to the `IEnumerable<IMessage> messages`  parameter, shown ear
     messages.Add(new Message<Get>(new Get(..));
     messages.Add(new Message<Set<int>>(new Set<int>(..));
 
-So now we have a way to add a set of desperate strongly type messages into a single collection / list.
+So now we have a way to add a set of disperate strongly type messages into a single collection / list.
 
 On the other side of the equation, there should be component handling the messages, like `Get` and `Set`. In Histrio, a `Behavior` is responsible to handle certain types of messages. A `CellBehavior` is such a `Behavior` that can hold on to a value for me and send it to another component on request (the `Get` and `Set` messages) :
 
