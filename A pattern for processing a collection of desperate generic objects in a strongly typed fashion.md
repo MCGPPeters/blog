@@ -1,18 +1,18 @@
 A pattern for processing a collection of disperate generic objects in a strongly typed fashion
 ------------------------------------------------------------------------
-When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing objectsa collection of disperate generic objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages, no matter what type they are. 
+When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing a collection of disperate objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages that need to processed, no matter what type they are. 
 
-A simple solution would be to put objects into the queue and cast them to a specific type. Be that as it may, in a system that potentially handles a huge amount of messages, this means a huge amount of type casting as well. In addition to that, an actor needs to respond to each message type in a different way (sending a message to an actor is somewhat of an equivalent to calling a method on an object). I would like some poor mans [pattern matching](http://en.wikipedia.org/wiki/Pattern_matching) so to say, based on the types of messages coming in.
+A simple solution would be to put untyped objects into the queue and cast them to a specific type when processing them. Be that as it may, in a system that potentially handles a huge amount of messages, this means a huge amount of type casting as well. In addition to that, an actor needs to respond to each message type in a different way (sending a message to an actor is somewhat of an equivalent to calling a method on an object). So that would mean maintaining a lot of switch statements, type casting and additional method calls. This would have to be done for each implementation of the handler of untyped objects, obscuring the intention of the code in the process. I would prefer some poor mans [pattern matching](http://en.wikipedia.org/wiki/Pattern_matching) so to say, based on the types of messages coming in.
 
 For the sake of brevity, I will represent the handling of messages as a simple method like this:  
     
     public void ProcessMessage(IEnumerable<IMessage> messages)
     {
-	    foreach (var message in messages)
-	    {
-	        message.GetHandledBy(_cellBehavior);
-	    }
-	}
+    	foreach (var message in messages)
+    	{
+        	message.GetHandledBy(_cellBehavior);
+    	}
+    }
     
 The "messages" enumerable must be able to hold any kind of object. But remember, I want to process them in a strongly type fashion. For instance a "Get" and  a "Set" message, like these:
 
@@ -23,7 +23,7 @@ The "messages" enumerable must be able to hold any kind of object. But remember,
             Customer = customer;
         }
 
-	    public Address Customer { get; private set; }
+	public Address Customer { get; private set; }
     }
     
     public class Set<T>
