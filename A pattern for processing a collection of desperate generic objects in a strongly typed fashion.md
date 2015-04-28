@@ -1,10 +1,12 @@
 A pattern for processing a collection of disperate generic objects in a strongly typed fashion
 ------------------------------------------------------------------------
-When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing a collection of disperate generically typed objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means the queue needs to contain all the messages that need to processed, no matter what type they are. 
+When working on my open source project [Histrio](https://github.com/MCGPPeters/Histrio) (a set of libraries for building actor based systems), on multiple occasions I've had the need for processing a collection of disperate generically typed objects as a single collection. At the same time I wanted to handle each individual object in a strongly type fashion when I was processing items from that collection. For example. An actor processes messages one at a time in the order the messages were received. This means messages have to be put into a single queue (the so called mailbox) per actor. This also means that queue needs to contain all the messages that need to processed, no matter what type they are. 
 
-A simple solution would be to put untyped objects into the queue and cast them to a specific type when processing them. Be that as it may, in a system that potentially handles a huge amount of messages, this means a huge amount of type casting as well. In addition to that, an actor needs to respond to each message type in a different way (sending a message to an actor is somewhat of an equivalent to calling a method on an object). So that would mean maintaining a lot of switch statements, type casting and additional method calls. This would have to be done for each implementation of the handler of untyped objects, obscuring the intention of the code in the process. I would prefer some kind of [pattern matching](http://en.wikipedia.org/wiki/Pattern_matching) so to say, based on the types of messages coming in and calling an explicit handler for that specific type of message.
+A simple solution would be to put untyped objects into the queue and cast them to a specific type when processing them. Be that as it may, in a system that potentially handles a huge amount of messages, this means a huge amount of type casting as well. In addition to that, an actor needs to respond to each message type in a different way (sending a message to an actor is somewhat of an equivalent to calling a method on an object). So that would mean maintaining a lot of switch statements, type casting and additional method calls. This would have to be done for each implementation of a handler of untyped disperate objects, obscuring the intention of the code in the process. I would prefer some kind of [pattern matching](http://en.wikipedia.org/wiki/Pattern_matching) so to say, based on the types of messages coming in and calling an explicit handler for that specific type of message.
 
-For the sake of brevity, I will represent the handling of messages as a simple method like this:  
+This post shows a pattern I found that solves this issue in pleasing way... for me at least... I didn't find nor recognize any pattern when searching for a solution online, so I thought I'de share this. Maybe it helps someone else facing the same issue. If someone else solved this issue in another way or did find a matching pattern... please leave a comment! Any suggestions on naming the pattern described below are welcome as well.
+
+For the sake of brevity, I will represent the processing of a collection of disperate objects (or messages) as a simple method, that will start as a starting point for describing the pattern:  
     
     public void ProcessMessage(IEnumerable<IMessage> messages)
     {
@@ -14,7 +16,7 @@ For the sake of brevity, I will represent the handling of messages as a simple m
     	}
     }
     
-The "messages" enumerable must be able to hold any kind of object. But remember, I want to process them in a strongly type fashion. For instance a "Get" and  a "Set" message, like these:
+The "messages" enumerable must be able to hold any kind of object. But remember, I want to process them in a strongly type fashion. For instance a "Get" and a "Set" message, like these:
 
     public class Get
     {
@@ -36,14 +38,14 @@ The "messages" enumerable must be able to hold any kind of object. But remember,
         public T Content { get; private set; }
     }
    
-Because I can't put these disperate message types in one list, I must have a shared interface to do so. This is the IMessage interface shown below (ignore the method for now):
+Because I can't put these disperate message types in one list, I must have a shared interface to do so. The IMessage interface, shown below, will serve that purpose (ignore the method for now):
 
     internal interface IMessage
     {
         void GetHandledBy(Behavior behavior);
     }
 
-So how can I put the `Get` and `Set` message into this same list. I don't want to alter the types of the `Get` and `Set`, but what I can do is define a generic type, `Message<T>`, that implements `IMessage` and will hold onto the `Get` and `Set` for me, like this (again, ignore the methods for now):
+So how can I put the `Get` and `Set` message into this same list. I prefer not to alter the types of the `Get` and `Set`, so what I can do is define a generic type, `Message<T>`, that implements `IMessage` and will hold onto the `Get` and `Set` for me, like this (again, ignore the methods for now):
 
     public class Message<T> : IMessage
     {
@@ -72,7 +74,7 @@ So adding messages to the `IEnumerable<IMessage> messages`  parameter, shown ear
 
 So now we have a way to add a set of disperate strongly type messages into a single collection / list.
 
-On the other side of the equation, there should be component handling the messages, like `Get` and `Set`. In Histrio, a `Behavior` is responsible to handle certain types of messages. A `CellBehavior` is such a `Behavior` that can hold on to a value for me and send it to another component on request (the `Get` and `Set` messages) :
+On the other side of the equation, there should be a component handling the messages, like `Get` and `Set`. In Histrio, a `Behavior` is responsible to handle certain types of messages. A `CellBehavior` is such a `Behavior`. This `Behavior` can hold on to a value for me (using a `Set` message) and send it to another component on request (using a `Get` message) :
 
     public class CellBehavior<T> : Behavior, IHandle<Get>, IHandle<Set<T>>
      {
@@ -90,7 +92,7 @@ On the other side of the equation, there should be component handling the messag
         }
     }
 
-The `CellBehavior` implements a certain interface, `IHandle<T>` twice (in this case), one time for each type of message it can react to. 
+The `CellBehavior` implements a certain interface, `IHandle<T>` (twice in this case), one time for each type of message it can react to. 
 
     public interface IHandle<in T>
     {
@@ -107,7 +109,7 @@ Take a look again at the first lines of code in the post:
 	    }
 	}
 
-You may notice that the `IMessage` asks the `CellBehavior` to handle it. But you also may have noticed there is an impedance mismatch between what the `CellBehavior` actually handles (namely strongly type instances of `Get` and `Set`) and `IMessage` that it is asked to handle. Here the `Behavior` base class comes in, from which the `CellBehavior` is derived. Also take a look again at the implementation of `Message<T>` and `IMessage`:
+You may notice that the `IMessage` asks the `CellBehavior` to handle it. But you also may have noticed there is an impedance mismatch between what the `CellBehavior` actually handles (namely strongly type instances of `Get` and `Set`) and `IMessage` that it is asked to handle. Here the `Behavior` base class comes in from which the `CellBehavior` is derived. Also take a look again at the implementation of `Message<T>` and `IMessage`:
 
     public abstract class Behavior
     {
@@ -157,4 +159,6 @@ Lets imagine that `IEnumerable<IMessage>` contains a `Message<Get>` message and 
  2. It then repeats the trick by checking if the `Behavior` implements the `IHandle<Get>` interface (thus `IHandle<T>` for that specific type of `T`) . If so it **calls back again to the `Message<Get>`** passing itself as the `IHandle<Get>` => `"message.GetHandledBy(_cellBehavior)"`
  3. Then for the last time the `Message<T>` calls back again to the `Behavior` (or more specifically, the `IHandle<Get>`) passing the body of the message (`Get`) as an argument **in a strongly typed fashion**
 
+In a follow up post I will show a similar scenario that uses this pattern, followed by a generalization of the pattern (with pictures... I promise :) ). The discussion of the generalization will hopefully give it a name as well (please leave suggestions)... Or it will point you to an already existing solution to the challenges described above...
 
+Cheers!
